@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Михаил Пришвин — Интерактивті тест</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Roboto:wght@400;500&display=swap');
+        body { font-family: 'Roboto', sans-serif; background-color: #064e3b; color: #ecfdf5; }
+        h1, h2, h3, .serif { font-family: 'Playfair Display', serif; }
+        .glass { background: rgba(2, 44, 34, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 1rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+        .answer-btn { transition: all 0.2s ease; border: 1px solid #047857; }
+        .answer-btn:hover:not(:disabled) { background: #059669; color: white; transform: translateY(-2px); border-color: #34d399; }
+        .answer-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-emerald-400 mb-3 tracking-wide">МИХАИЛ ПРИШВИН</h1>
+            <h2 class="text-2xl text-emerald-200 mb-4 serif italic">Табиғат жыршысы (Бейне-тест)</h2>
+            <p class="text-emerald-100 max-w-2xl mx-auto text-sm">Бейнероликті тыңдаңыз, әр 10 секунд сайын шығатын сұрақтарға жауап беріңіз. Ескерту: барлық жауаптар бірдей 4 сөзден тұрады.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Видео аймағы -->
+            <div class="lg:col-span-3 relative">
+                <div class="video-container" id="player-wrapper">
+                    <div id="player"></div>
+                </div>
+
+                <!-- Сұрақтар Overlay -->
+                <div id="quiz-overlay" class="hidden absolute inset-0 glass flex items-center justify-center p-6 z-50 rounded-2xl">
+                    <div class="w-full max-w-2xl">
+                        <div id="question-box" class="space-y-6">
+                            <div class="text-center border-b border-emerald-800 pb-4">
+                                <span class="text-emerald-400 font-bold uppercase tracking-widest text-xs">Мәтін бойынша сұрақ</span>
+                                <h2 id="question-text" class="text-xl md:text-2xl font-bold mt-2 serif leading-tight">Сұрақ жүктелуде...</h2>
+                            </div>
+                            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <!-- Жауаптар -->
+                            </div>
+                        </div>
+                        <div id="feedback" class="hidden mt-6 p-4 rounded-xl text-center font-bold text-lg"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="glass p-6 rounded-2xl">
+                    <h3 class="text-xl font-bold mb-4 text-emerald-100 serif">Нәтиже</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center border-b border-emerald-800 pb-2">
+                            <span class="text-emerald-200">Сұрақ:</span>
+                            <span id="current-q-num" class="font-bold text-emerald-400">0 / 15</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-emerald-800 pb-2">
+                            <span class="text-emerald-200">Ұпай:</span>
+                            <span id="score" class="text-3xl font-bold text-green-400">0</span>
+                        </div>
+                        <div class="w-full bg-emerald-900 rounded-full h-2 mt-4">
+                            <div id="progress-bar" class="bg-emerald-400 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 rounded-2xl bg-emerald-900/50 border border-emerald-800">
+                    <p class="text-sm text-emerald-200 leading-relaxed italic serif">
+                        "Оқырманды өз әлеміне жетелеп, табиғаттың үнін естірту үшін ерекше сезім мен талант керек..."
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Финалдық модаль -->
+    <div id="final-modal" class="hidden fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
+        <div class="glass p-10 rounded-2xl max-w-md text-center border border-emerald-600/50">
+            <h2 class="text-4xl font-bold mb-4 text-emerald-400 serif">Қорытынды</h2>
+            <p class="text-lg text-emerald-100 mb-6">Сіздің табиғатты ұғыну деңгейіңіз:<br> <span id="final-score" class="text-3xl font-bold text-white mt-2 inline-block">0</span> / 15</p>
+            <button onclick="location.reload()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-lg font-bold transition w-full">Қайта тыңдау</button>
+        </div>
+    </div>
+
+    <script>
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        let player;
+        let score = 0;
+        let currentQuizIndex = 0;
+        let isQuizShowing = false;
+
+        // БАРЛЫҚ ЖАУАПТАР ТУРА 4 СӨЗДЕН ТҰРАДЫ ЖӘНЕ ӘР 10 СЕКУНД САЙЫН ШЫҒАДЫ
+        const quizData = [
+            { time: 10, q: "Михаил Пришвин қай жылы және қандай отбасында дүниеге келген?", options: ["Ол саудагер отбасында туған", "Ол шаруалар отбасында туған", "Ол әскерилер отбасында туған", "Ол жұмысшылар отбасында туған"], correct: 0 },
+            { time: 20, q: "Михаил Пришвин гимназиядан қандай пән мұғалімімен келіспей қалғандықтан шығарылды?", options: ["Қатаң география пәні мұғалімімен", "Қатаң математика пәні мұғалімімен", "Қатаң тарих пәні мұғалімімен", "Қатаң әдебиет пәні мұғалімімен"], correct: 0 },
+            { time: 30, q: "Гимназиядан соң ол қай қаладағы оқу орнына барып түсті?", options: ["Рига қаласының оқу орнына", "Мәскеу қаласының оқу орнына", "Қазан қаласының оқу орнына", "Киев қаласының оқу орнына"], correct: 0 },
+            { time: 40, q: "Ол Лейпциг қаласында оқып, қандай мамандық иесі болып шықты?", options: ["Ауыл шаруашылығы агрономы болды", "Ауыл шаруашылығы инженері болды", "Ауыл шаруашылығы дәрігері болды", "Ауыл шаруашылығы мұғалімі болды"], correct: 0 },
+            { time: 50, q: "Оның табиғат туралы жазылған ең алғашқы кітабы қалай аталады?", options: ["Үркітілмеген құстар өлкесінде кітабы", "Үркітілмеген аңдар өлкесінде кітабы", "Үркітілмеген балықтар өлкесінде кітабы", "Үркітілмеген гүлдер өлкесінде кітабы"], correct: 0 },
+            { time: 60, q: "Ол саяхатын қандай ертегі кейіпкерінің соңынан еріп жасады?", options: ["Сиқырлы бауырсақтың соңынан еріп", "Сиқырлы сақинаның соңынан еріп", "Сиқырлы таяқшаның соңынан еріп", "Сиқырлы кілемнің соңынан еріп"], correct: 0 },
+            { time: 70, q: "Балалық шақта бәріміз кімсіз және несіз елге қашамыз?", options: ["Ешқандай аты жоқ елге", "Ешқандай заңы жоқ елге", "Ешқандай шегі жоқ елге", "Ешқандай мұңы жоқ елге"], correct: 0 },
+            { time: 80, q: "Пришвиннің шығармаларында Ежелгі Русь қандай күйде сақталып қалған деп айтылады?", options: ["Өте таза бұзылмаған күйде", "Өте көне бұзылмаған күйде", "Өте жаңа бұзылмаған күйде", "Өте бай бұзылмаған күйде"], correct: 0 },
+            { time: 90, q: "Оның кітаптарын оқығанда қандай шөптің иісін сезуге болады?", options: ["Жаңа орылған шөптің иісін", "Жаңа кепкен шөптің иісін", "Жаңа шыққан шөптің иісін", "Жаңа жұлынған шөптің иісін"], correct: 0 },
+            { time: 100, q: "Шөптің иісінен бөлек, жағалаудағы қандай құмның иісі сезіледі?", options: ["Су тиген ылғалды құмның", "Күн тиген ыстық құмның", "Жел тиген суық құмның", "Қар тиген мұзды құмның"], correct: 0 },
+            { time: 110, q: "Қайық ескектерінің суға тигендегі қандай дыбысы естіліп тұрады?", options: ["Судағы өте ақырын шалпылы", "Судағы өте қатты шалпылы", "Судағы өте шулы шалпылы", "Судағы өте тез шалпылы"], correct: 0 },
+            { time: 120, q: "Оқырманды өз әлеміне жетелеу үшін авторға не қажет болды?", options: ["Ерекше талант пен сезім", "Ерекше білім пен ақыл", "Ерекше байлық пен күш", "Ерекше уақыт пен еңбек"], correct: 0 },
+            { time: 130, q: "Автор оқырманды сүйікті жерлерімен қалай ертіп жүреді дейді?", options: ["Тура қолдан жетектеп жүргендей", "Тура арттан ертіп жүргендей", "Тура қасында бірге жүргендей", "Тура алдынан күтіп жүргендей"], correct: 0 },
+            { time: 140, q: "Жазушы табиғат туралы әңгімелері арқылы оқырманға нені жеткізгісі келеді?", options: ["Өзінің шексіз үлкен махаббатын", "Өзінің шексіз үлкен арманын", "Өзінің шексіз үлкен мұңын", "Өзінің шексіз үлкен сырын"], correct: 0 },
+            { time: 150, q: "Бұл бейнеролик жалпы кімнің өмірі мен шығармашылығына арналған?", options: ["Орыс жазушысы Михаил Пришвинге", "Орыс ақыны Сергей Есенинге", "Орыс ғалымы Михаил Ломоносовқа", "Орыс суретшісі Исаак Левитанға"], correct: 0 }
+        ];
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                videoId: 'qgMTOFjdQ5I',
+                playerVars: { 'autoplay': 0, 'controls': 1, 'rel': 0, 'modestbranding': 1, 'iv_load_policy': 3 },
+                events: { 'onStateChange': onPlayerStateChange }
+            });
+        }
+
+        function onPlayerStateChange(event) {
+            if (event.data == YT.PlayerState.PLAYING) {
+                startTimeTracker();
+            }
+        }
+
+        function startTimeTracker() {
+            const checkTime = setInterval(() => {
+                if (isQuizShowing) return;
+                const currentTime = Math.floor(player.getCurrentTime());
+                const quiz = quizData[currentQuizIndex];
+                if (quiz && currentTime >= quiz.time) {
+                    showQuiz(quiz);
+                    isQuizShowing = true;
+                    player.pauseVideo();
+                    clearInterval(checkTime);
+                }
+            }, 500);
+        }
+
+        function showQuiz(quiz) {
+            const overlay = document.getElementById('quiz-overlay');
+            const qText = document.getElementById('question-text');
+            const optionsGrid = document.getElementById('options-grid');
+            overlay.classList.remove('hidden');
+            qText.innerText = quiz.q;
+            optionsGrid.innerHTML = '';
+            document.getElementById('current-q-num').innerText = `${currentQuizIndex + 1} / 15`;
+
+            quiz.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "answer-btn w-full text-left p-4 rounded-lg bg-emerald-900/50 text-sm md:text-base font-medium shadow-sm";
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(index, quiz.correct);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedIndex, correctIndex) {
+            const feedback = document.getElementById('feedback');
+            const btns = document.querySelectorAll('.answer-btn');
+            feedback.classList.remove('hidden');
+            
+            if (selectedIndex === correctIndex) {
+                score++;
+                feedback.innerText = "✓ Дұрыс. Өте мұқиятсыз.";
+                feedback.className = "mt-6 p-4 rounded-lg text-center font-bold text-lg bg-emerald-800/50 text-emerald-400 border border-emerald-600";
+                document.getElementById('score').innerText = score;
+            } else {
+                feedback.innerText = "✗ Қате. Мәтінге мұқият болыңыз.";
+                feedback.className = "mt-6 p-4 rounded-lg text-center font-bold text-lg bg-red-900/50 text-red-400 border border-red-800";
+            }
+
+            document.getElementById('progress-bar').style.width = `${((currentQuizIndex + 1) / 15) * 100}%`;
+            btns.forEach(b => {
+                b.disabled = true;
+                const idx = Array.from(btns).indexOf(b);
+                if(idx === correctIndex) b.classList.add('bg-emerald-800/80', 'border-emerald-500');
+                if(idx === selectedIndex && idx !== correctIndex) b.classList.add('bg-red-900/50', 'border-red-600');
+            });
+
+            setTimeout(() => {
+                document.getElementById('quiz-overlay').classList.add('hidden');
+                feedback.classList.add('hidden');
+                isQuizShowing = false;
+                currentQuizIndex++;
+                if (currentQuizIndex >= quizData.length) {
+                    showFinalResult();
+                } else {
+                    player.playVideo();
+                }
+            }, 3000);
+        }
+
+        function showFinalResult() {
+            player.stopVideo();
+            document.getElementById('final-modal').classList.remove('hidden');
+            document.getElementById('final-score').innerText = score;
+        }
+    </script>
+</body>
+</html>
